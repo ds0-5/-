@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>印库 · 主观题学习页</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .tip{color:var(--ink-3);font-size:13px;margin-bottom:14px}
+  .tabs{display:flex;gap:8px;flex-wrap:wrap;margin:14px 0}
+  .tab{padding:7px 16px;border:1px solid var(--line);border-radius:999px;background:var(--glass-strong);color:var(--ink-2);font-size:13px;cursor:pointer;transition:all var(--t) var(--ease-out)}
+  .tab.active{background:var(--accent);border-color:transparent;color:#fff}
+  .qhead{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap}
+  .ch{color:var(--ink-3);font-size:13px} .kp{color:#7c3aed;font-size:13px}
+  .qtext{font-size:15px;line-height:1.7;white-space:pre-line;background:rgba(255,255,255,.5);border:1px solid var(--line);border-radius:var(--radius-sm);padding:12px 14px}
+  .ans-btn{margin-top:12px;padding:6px 14px;border:0;border-radius:var(--radius-sm);background:rgba(139,92,246,.14);color:#7c3aed;font-size:13px;cursor:pointer;transition:background var(--t)}
+  .ans-btn:hover{background:rgba(139,92,246,.24)}
+  .ans{display:none;margin-top:12px;font-size:14px;line-height:1.8;white-space:pre-wrap;background:rgba(16,185,129,.10);border:1px solid rgba(16,185,129,.35);color:var(--ok-ink);border-radius:var(--radius-sm);padding:12px 14px}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b>印库</b><span>主观题学习</span></div>
+  <div class="nav"><a href="practice.html">← 练习</a><a href="admin.html">⚙️ 后台</a><span id="count" class="cnt">加载中…</span></div>
+</header>
+<div class="wrap">
+  <div class="tip">💡 先自己读题想思路，再看参考答案，别急着点开</div>
+  <div class="tabs" id="tabs">
+    <button class="tab active" data-t="">全部</button>
+    <button class="tab" data-t="fill">填空题</button>
+    <button class="tab" data-t="apply">应用题</button>
+    <button class="tab" data-t="comprehensive">综合题</button>
+  </div>
+  <div id="list"></div>
+</div>
+<script>
+const API = "http://127.0.0.1:8000";
+let all = []; let curType = "";
+const TYPE_NAME = { "fill":"填空题", "apply":"应用题", "comprehensive":"综合题" };
+const TYPE_COLOR = { "fill":"#4d9cf6", "apply":"#8b5cf6", "comprehensive":"#10b981" };
+function esc(s){return (s||"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+async function loadData(){
+  try{
+    const resp = await fetch(API + "/learn/questions"); const data = await resp.json();
+    all = data.questions || [];
+    document.getElementById("count").textContent = "共 " + (data.total || 0) + " 道主观大题";
+    document.querySelectorAll(".tab").forEach(btn=>{
+      const t = btn.dataset.t; if(t==="") return;
+      const n = all.filter(q=>q.type===t).length; btn.textContent = TYPE_NAME[t] + "（" + n + "）";
+    });
+    render();
+  }catch(e){ document.getElementById("list").innerHTML = '<div class="empty">❌ 连不上后端…<br>请确认 uvicorn 正在运行</div>'; }
+}
+function toggleAns(btn){
+  const ans = btn.nextElementSibling;
+  if(ans.style.display==="block"){ ans.style.display="none"; btn.textContent="📖 查看参考答案"; }
+  else { ans.style.display="block"; btn.textContent="🙈 收起答案"; }
+}
+function render(){
+  const list = curType ? all.filter(q=>q.type===curType) : all;
+  const box = document.getElementById("list");
+  if(list.length===0){ box.innerHTML='<div class="empty">这一组还没有题</div>'; return; }
+  box.innerHTML = list.map(q=>
+    '<div class="card"><div class="qhead">' +
+      '<span class="badge" style="background:'+TYPE_COLOR[q.type]+'">'+TYPE_NAME[q.type]+'</span>' +
+      '<span class="ch">'+esc(q.chapter)+'</span>' +
+      '<span class="kp">'+esc(q.knowledge_point)+'</span>' +
+    '</div>' +
+    '<div class="qtext">'+esc(q.question)+'</div>' +
+    '<button class="ans-btn" onclick="toggleAns(this)">📖 查看参考答案</button>' +
+    '<div class="ans">'+esc(q.answer)+'</div></div>'
+  ).join("");
+}
+document.getElementById("tabs").addEventListener("click", function(e){
+  if(e.target.classList.contains("tab")){
+    document.querySelectorAll(".tab").forEach(b=>b.classList.remove("active"));
+    e.target.classList.add("active"); curType = e.target.dataset.t; render();
+  }
+});
+loadData();
+</script>
+</body>
+</html>

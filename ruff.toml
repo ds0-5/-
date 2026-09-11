@@ -1,0 +1,5 @@
+line-length = 100
+target-version = "py311"
+exclude = ["app/main.py"]   # Phase A 先放过巨无霸，等 Phase B 拆完再整体格式化
+[lint]
+select = ["E", "F", "I", "W"]   # pycodestyle + pyflakes + isort + warnings

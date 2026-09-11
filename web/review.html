@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>印库 · 间隔复习</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .cnt{font-size:13px;color:var(--ink-3);font-weight:400}
+  .q{font-size:16px;line-height:1.6;margin:4px 0 14px}
+  .rev-ans{margin-top:14px;background:rgba(99,102,241,.08);border-radius:var(--radius-sm);padding:14px;font-size:14px;line-height:1.7;display:none}
+  .rev-ans.show{display:block;animation:rise var(--t) var(--ease-out) both}
+  .btns{display:flex;gap:10px;margin-top:16px}
+  .b-yes{background:var(--ok);color:#fff} .b-no{background:var(--bad);color:#fff}
+  .done{text-align:center;color:var(--ink-3);margin-top:24px;line-height:1.8}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b>📅 印库</b><span>今日复习</span></div>
+  <div class="nav"><a href="bookshelf.html">← 书架</a><span class="cnt" id="cnt"></span></div>
+</header>
+<div class="wrap" id="wrap"></div>
+<script>
+const API = "http://127.0.0.1:8000";
+const UID = localStorage.getItem("yinku_uid") || new URLSearchParams(location.search).get("user_id") || "u1";
+if(!localStorage.getItem("yinku_uid")){ location.href="login.html"; }
+let queue = [], pos = 0;
+async function load(){
+  const cards = await (await fetch(API + "/due?user_id=" + encodeURIComponent(UID) + "&include_new=true&limit=200")).json();
+  if (cards.error){ document.getElementById("wrap").innerHTML = "<div class='empty'>" + cards.error + "</div>"; return; }
+  queue = cards;
+  if (!queue.length){ document.getElementById("wrap").innerHTML = "<div class='empty'>🎉 没有待复习的题。</div>"; return; }
+  document.getElementById("cnt").textContent = "共 " + queue.length + " 张";
+  render();
+}
+function render(){
+  const c = queue[pos]; const opts = c.options || {}; let optHtml = "";
+  Object.keys(opts).forEach(k => { optHtml += "<div class='opt'>" + k + ". " + opts[k] + "</div>"; });
+  document.getElementById("wrap").innerHTML = `
+    <div class="card">
+      <div class="meta">📂 ${c.chapter} · ${c.knowledge_point} · 上次间隔 ${c.interval} 天</div>
+      <div class="q">${c.question}</div>
+      ${optHtml}
+      <div class="btns">
+        <button class="act b-yes" onclick="grade(true)">记得 ✅</button>
+        <button class="act b-no" onclick="grade(false)">忘了 ❌</button>
+      </div>
+      <div class="rev-ans" id="revAns"></div>
+    </div>`;
+}
+async function grade(remember){
+  const c = queue[pos];
+  const j = await (await fetch(API + "/review", {method:"POST", headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({ user_id:UID, qid:c.qid, correct:remember })}).json();
+  const ans = document.getElementById("revAns");
+  ans.classList.add("show");
+  ans.innerHTML = "下次复习：" + j.next_due + "（间隔 " + j.next_interval_days + " 天）｜EF " + j.ef +
+    "<br><br><b>答案：</b>" + c.answer + "<br><b>解析：</b>" + (c.parsing||"").replace(/\n/g, "<br>");
+  document.querySelector(".btns").innerHTML = "<button class='act' onclick='next()'>下一张 →</button>";
+  pos++; document.getElementById("cnt").textContent = "剩 " + (queue.length - pos) + " 张";
+}
+function next(){
+  if (pos >= queue.length){ document.getElementById("cnt").textContent = "完成";
+    document.getElementById("wrap").innerHTML += "<div class='done'>🎉 本轮复习完成！学过的题会按遗忘曲线自动排期。</div>"; return; }
+  render();
+}
+load();
+</script>
+</body>
+</html>

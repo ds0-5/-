@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>印库 · 错题与薄弱项</title>
+<link rel="stylesheet" href="theme.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b>印库</b><span>错题与薄弱项</span></div>
+  <div class="nav"><a href="practice.html">← 练习</a><a href="javascript:location.reload()">刷新</a></div>
+</header>
+<div class="wrap">
+  <div class="card" id="weakBox"><h2 style="font-size:16px;margin:0 0 12px">📊 知识点薄弱项</h2><div id="weakList">加载中…</div></div>
+  <div class="card" id="wrongBox"><h2 style="font-size:16px;margin:0 0 12px">📕 错题本</h2><div id="wrongList">加载中…</div></div>
+</div>
+<script>
+const API = "http://127.0.0.1:8000";
+async function loadWeakpoints() {
+  try {
+    const resp = await fetch(API + "/stats/weakpoints"); const data = await resp.json();
+    const box = document.getElementById("weakList");
+    if (!data.weakpoints || data.weakpoints.length === 0) { box.innerHTML = "还没有练习记录，先去 <a class='link' href='practice.html'>练习</a> 几道题吧。"; return; }
+    let rows = "";
+    for (const w of data.weakpoints) {
+      const cls = w.wrong_rate >= 50 ? "badge-red" : (w.wrong_rate >= 20 ? "badge-yellow" : "badge-green");
+      rows += `<tr><td>${escapeHtml(w.knowledge_point)}</td><td>${w.total} 次</td>
+        <td><span class="badge ${cls}">错误率 ${w.wrong_rate}%</span></td><td>对 ${w.correct} / 错 ${w.wrong}</td></tr>`;
+    }
+    box.innerHTML = `<table><tr><th>知识点</th><th>答题次数</th><th>错误率</th><th>对/错</th></tr>${rows}</table>`;
+  } catch (e) { document.getElementById("weakList").innerHTML = "无法连接后端：" + e.message; }
+}
+async function loadWrong() {
+  try {
+    const resp = await fetch(API + "/wrong"); const data = await resp.json();
+    const box = document.getElementById("wrongList");
+    if (!data.wrong_questions || data.wrong_questions.length === 0) { box.innerHTML = "暂无错题，继续保持！🎉"; return; }
+    let html = "";
+    for (const w of data.wrong_questions) {
+      const opts = w.options || {};
+      const optHtml = Object.keys(opts).map(k => `<div><b>${escapeHtml(k)}.</b> ${escapeHtml(opts[k])}</div>`).join("");
+      html += `<div style="padding:12px 0;border-bottom:1px dashed var(--line)">
+        <div style="line-height:1.7;margin:6px 0">${escapeHtml(w.question)}</div>
+        <div style="color:var(--ink-3);font-size:13px;line-height:1.6">${optHtml}</div>
+        <div style="margin-top:8px;font-size:14px">✅ 正确答案：<b style="color:var(--ok-ink)">${escapeHtml(w.answer)}</b>
+          （错了 ${w.wrong_times} 次）· 知识点：${escapeHtml(w.knowledge_point)}</div>
+        ${w.parsing ? `<div class="parsing"><b>解析：</b>${escapeHtml(w.parsing)}</div>` : ""}
+        ${w.common_errors ? `<div class="parsing"><b>常见错误：</b>${escapeHtml(w.common_errors)}</div>` : ""}</div>`;
+    }
+    box.innerHTML = html;
+  } catch (e) { document.getElementById("wrongList").innerHTML = "无法连接后端：" + e.message; }
+}
+function escapeHtml(s) {
+  return (s || "").toString().replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+loadWeakpoints(); loadWrong();
+</script>
+</body>
+</html>

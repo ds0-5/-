@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>印库 · 书架</title>
+<style>
+:root{
+  --bg:#eef1f8;
+  --ink:#1f2430;
+  --ink-2:#5b6478;
+  --ink-3:#9aa3b5;
+  --line:rgba(20,30,60,.10);
+  --glass:rgba(255,255,255,.55);
+  --glass-strong:rgba(255,255,255,.80);
+  --blur:18px;
+  --accent:#6366f1;
+  --radius:18px;
+  --radius-sm:12px;
+  --shadow:0 10px 30px rgba(20,30,60,.12);
+  --shadow-lg:0 24px 60px rgba(20,30,60,.22);
+  --ease-spring:cubic-bezier(.34,1.56,.64,1);
+  --ease-out:cubic-bezier(.22,1,.36,1);
+  --t:340ms;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
+  color:var(--ink);background:var(--bg);
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+}
+body::before,body::after{
+  content:"";position:fixed;z-index:0;border-radius:50%;
+  filter:blur(90px);opacity:.5;pointer-events:none;
+}
+body::before{width:540px;height:540px;left:-140px;top:-180px;background:radial-gradient(circle,#a5b4fc,transparent 70%)}
+body::after{width:500px;height:500px;right:-160px;bottom:-200px;background:radial-gradient(circle,#7dd3fc,transparent 70%)}
+
+header{
+  position:sticky;top:0;z-index:10;
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px clamp(16px,4vw,40px);
+  background:var(--glass);backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));
+  border-bottom:1px solid var(--line);
+}
+.brand{display:flex;align-items:baseline;gap:10px}
+.brand b{font-size:19px;font-weight:600;letter-spacing:.5px}
+.brand span{font-size:12px;color:var(--ink-3)}
+.nav{display:flex;gap:10px}
+.nav button{
+  border:1px solid var(--line);background:var(--glass-strong);
+  color:var(--ink-2);font-size:13px;font-weight:500;
+  padding:9px 14px;border-radius:999px;cursor:pointer;
+  transition:transform var(--t) var(--ease-out),box-shadow var(--t) var(--ease-out),color var(--t);
+}
+.nav button:hover{transform:translateY(-2px);box-shadow:var(--shadow);color:var(--ink)}
+.nav .primary{background:var(--accent);color:#fff;border-color:transparent}
+
+main{position:relative;z-index:1;padding:clamp(20px,4vw,44px)}
+.shelf-group{margin-bottom:38px}
+.shelf-group h2{font-size:12px;font-weight:600;color:var(--ink-3);letter-spacing:3px;margin:0 0 16px 4px;text-transform:uppercase}
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:18px}
+.book{
+  position:relative;aspect-ratio:3/4;border-radius:var(--radius-sm);
+  background:var(--glass);backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));
+  border:1px solid var(--line);padding:16px 14px;cursor:pointer;overflow:hidden;
+  display:flex;flex-direction:column;justify-content:space-between;
+  box-shadow:var(--shadow);
+  transition:transform var(--t) var(--ease-out),box-shadow var(--t) var(--ease-out);
+  animation:rise var(--t) var(--ease-out) both;
+}
+.book::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--c,#6366f1)}
+.book::after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(120deg,transparent 40%,rgba(255,255,255,.55) 50%,transparent 60%);
+  transform:translateX(-120%);transition:transform .7s var(--ease-out);pointer-events:none;
+}
+.book:hover{transform:translateY(-8px) scale(1.02);box-shadow:var(--shadow-lg)}
+.book:hover::after{transform:translateX(120%)}
+.book .b-title{font-size:15px;font-weight:600;line-height:1.35;padding-left:6px}
+.book .b-tag{font-size:11px;color:var(--ink-3);padding-left:6px}
+.book.skeleton{animation:shimmer 1.2s infinite;background:linear-gradient(100deg,rgba(255,255,255,.4) 30%,rgba(255,255,255,.85) 50%,rgba(255,255,255,.4) 70%);background-size:200% 100%}
+@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+
+.overlay{position:fixed;inset:0;z-index:20;background:rgba(20,30,60,.28);
+  backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);
+  opacity:0;pointer-events:none;transition:opacity var(--t) var(--ease-out)}
+.overlay.show{opacity:1;pointer-events:auto}
+.modal{
+  position:fixed;left:50%;top:50%;z-index:30;width:min(460px,92vw);
+  transform:translate(-50%,-46%) scale(.96);opacity:0;pointer-events:none;
+  background:var(--glass-strong);backdrop-filter:blur(var(--blur));-webkit-backdrop-filter:blur(var(--blur));
+  border:1px solid var(--line);border-radius:var(--radius);
+  padding:24px;box-shadow:var(--shadow-lg);max-height:88vh;overflow:auto;
+  transition:transform var(--t) var(--ease-spring),opacity var(--t) var(--ease-out);
+}
+.modal.show{transform:translate(-50%,-50%) scale(1);opacity:1;pointer-events:auto}
+.modal h3{font-size:17px;font-weight:600;margin-bottom:14px;display:flex;align-items:center;gap:8px}
+.modal h3 .dot{width:10px;height:10px;border-radius:3px;background:var(--accent)}
+label{display:block;font-size:12px;color:var(--ink-2);margin:12px 0 5px}
+input,select,textarea{
+  width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:var(--radius-sm);
+  font-size:14px;font-family:inherit;background:rgba(255,255,255,.7);color:var(--ink);
+  transition:border-color var(--t),box-shadow var(--t);
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px rgba(99,102,241,.15)}
+textarea{resize:vertical;min-height:62px}
+.row{display:flex;gap:10px}.row>div{flex:1}
+.btns{display:flex;gap:10px;margin-top:18px;flex-wrap:wrap}
+button.act{flex:1;min-width:120px;padding:12px;border:none;border-radius:var(--radius-sm);font-size:14px;font-weight:600;cursor:pointer;transition:transform var(--t) var(--ease-spring),box-shadow var(--t),filter var(--t)}
+button.act:active{transform:scale(.96)}
+.b-save{background:#e7ecff;color:#3b3fae}
+.b-plan{background:var(--accent);color:#fff}
+.b-review{background:#fde9d3;color:#b4690e}
+.b-close{position:absolute;top:14px;right:14px;width:32px;height:32px;border:none;border-radius:50%;background:rgba(20,30,60,.06);color:var(--ink-2);font-size:18px;cursor:pointer;line-height:1}
+.b-close:hover{background:rgba(20,30,60,.12)}
+.plan{margin-top:16px;background:rgba(99,102,241,.07);border-radius:var(--radius-sm);padding:14px;font-size:13px;line-height:1.7;white-space:pre-wrap;display:none}
+.chapters{margin-top:12px;display:flex;flex-wrap:wrap;gap:8px}
+.chapters .c{background:rgba(99,102,241,.12);color:#4b4fc4;border-radius:999px;padding:6px 12px;font-size:12px;text-decoration:none;animation:pop .4s var(--ease-spring) both}
+@keyframes pop{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}
+.hint{font-size:12px;color:var(--ink-3);margin-top:10px;min-height:16px}
+.empty{color:var(--ink-3);font-size:14px;padding:40px;text-align:center}
+@media(max-width:560px){
+  .shelf{grid-template-columns:repeat(auto-fill,minmax(108px,1fr));gap:14px}
+  .brand span{display:none}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="brand"><b>印库</b><span>你的随身刷题书架</span></div>
+  <div class="nav">
+    <button id="bProfileTop">我的档案</button>
+    <button class="primary" id="bReviewTop">今日复习</button>
+  </div>
+</header>
+<main id="main"></main>
+
+<div class="overlay" id="overlay"></div>
+<div class="modal" id="modal">
+  <button class="b-close" id="bClose">×</button>
+  <h3><span class="dot"></span><span id="mTitleText">书名</span></h3>
+  <div id="mBody"></div>
+</div>
+
+<script>
+const API="http://127.0.0.1:8000";
+let UID=localStorage.getItem("yinku_uid")||"u1", CUR="";
+const SUBJECT_COLORS={ "数据结构":"#6366f1","操作系统":"#10b981","计算机网络":"#0ea5e9","数据库":"#f59e0b","组成原理":"#8b5cf6","算法":"#ef4444","高数":"#ec4899","线代":"#14b8a6","概率":"#f97316" };
+const GROUP_MAP={ "期末复习":["数据结构","操作系统","计算机网络","数据库","组成原理"], "考研":["算法","高数","线代","概率"] };
+const colorOf=n=>SUBJECT_COLORS[n]||"#6366f1";
+
+function profileForm(){
+  return '<label>学校</label><input id="fSchool" placeholder="例如 某某大学">'
+    +'<div class="row"><div><label>专业</label><input id="fMajor" placeholder="计算机"></div>'
+    +'<div><label>自报水平</label><select id="fLevel"><option>小白入门</option><option>期末复习</option><option>考研</option><option>保研</option></select></div></div>'
+    +'<label>其他期望（目标分 / 薄弱点 / 节奏）</label><textarea id="fExpect" placeholder="例如 想稳过、每天刷10分钟"></textarea>';
+}
+function bookShell(c){
+  const b=document.createElement("div"); b.className="book"; b.style.setProperty("--c",colorOf(c));
+  return b;
+}
+async function loadShelf(){
+  const main=document.getElementById("main"); main.innerHTML="";
+  for(let i=0;i<6;i++){ const s=bookShell(""); s.className+=" skeleton"; s.innerHTML='<div class="b-title">&nbsp;</div>'; main.appendChild(s); }
+  let courses=[];
+  try{ courses=await (await fetch(API+"/courses")).json(); }catch(e){ main.innerHTML='<div class="empty">后端未启动，先跑 uvicorn</div>'; return; }
+  if(!courses.length){ main.innerHTML='<div class="empty">题库还是空的，先导入题目</div>'; return; }
+  const groups={};
+  courses.forEach(c=>{ let g="我的课程"; for(const k in GROUP_MAP){ if(GROUP_MAP[k].includes(c)){g=k;break;} } (groups[g]=groups[g]||[]).push(c); });
+  main.innerHTML=""; let i=0;
+  for(const g in groups){
+    const sec=document.createElement("section"); sec.className="shelf-group";
+    sec.innerHTML='<h2>'+g+'</h2>';
+    const shelf=document.createElement("div"); shelf.className="shelf";
+    groups[g].forEach(c=>{
+      const b=bookShell(c); b.style.animationDelay=(i*60)+"ms"; i++;
+      b.innerHTML='<div class="b-title">'+c+'</div><div class="b-tag">点击开始</div>';
+      b.onclick=()=>openBook(c); shelf.appendChild(b);
+    });
+    sec.appendChild(shelf); main.appendChild(sec);
+  }
+}
+function openBook(course){
+  CUR=course; document.getElementById("mTitleText").textContent=course;
+  document.getElementById("mBody").innerHTML=profileForm()
+    +'<div class="btns"><button class="act b-save" onclick="saveProfile(false)">保存档案</button>'
+    +'<button class="act b-plan" onclick="genPlan()">生成万能方案</button>'
+    +'<button class="act b-review" onclick="goReview()">今日复习</button></div>'
+    +'<div class="plan" id="planBox"></div><div class="chapters" id="chapBox"></div><div class="hint" id="hint"></div>';
+  show();
+}
+function openProfile(){
+  document.getElementById("mTitleText").textContent="我的档案";
+  document.getElementById("mBody").innerHTML=profileForm()
+    +'<div class="btns"><button class="act b-save" onclick="saveProfile(true)">保存档案</button></div><div class="hint" id="hint"></div>';
+  show();
+}
+function show(){ document.getElementById("overlay").classList.add("show"); document.getElementById("modal").classList.add("show"); }
+function closeModal(){ document.getElementById("modal").classList.remove("show"); document.getElementById("overlay").classList.remove("show"); }
+document.getElementById("bClose").onclick=closeModal;
+document.getElementById("overlay").onclick=closeModal;
+document.getElementById("bProfileTop").onclick=openProfile;
+document.getElementById("bReviewTop").onclick=goReview;
+
+async function saveProfile(fromTop){
+  const body={ user_id:UID, course:fromTop?null:CUR,
+    school:document.getElementById("fSchool").value, major:document.getElementById("fMajor").value,
+    level:document.getElementById("fLevel").value, expectation:document.getElementById("fExpect").value };
+  const j=await (await fetch(API+"/profile",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})).json();
+  document.getElementById("hint").textContent=j.ok?"✅ 档案已保存":"❌ "+(j.error||"保存失败");
+}
+async function genPlan(){
+  const j=await (await fetch(API+"/diagnose",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:UID})})).json();
+  if(j.error){ document.getElementById("hint").textContent="❌ "+j.error; return; }
+  const pb=document.getElementById("planBox"); pb.style.display="block"; pb.textContent="";
+  const t=j.evaluation_and_plan||""; let k=0;
+  const timer=setInterval(()=>{ pb.textContent=t.slice(0,++k); if(k>=t.length)clearInterval(timer); },12);
+  const cb=document.getElementById("chapBox"); cb.innerHTML="";
+  (j.chapters||[]).forEach((c,idx)=>{
+    const a=document.createElement("a"); a.className="c"; a.textContent=c.chapter;
+    a.href="practice.html?chapter="+encodeURIComponent(c.chapter); a.style.animationDelay=(idx*60)+"ms";
+    cb.appendChild(a);
+  });
+}
+function goReview(){ window.open("review.html?user_id="+UID,"_blank"); }
+if(!localStorage.getItem("yinku_uid")){ location.href="login.html"; }
+
+loadShelf();
+</script>
+</body>
+</html>

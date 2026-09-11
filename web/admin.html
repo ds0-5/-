@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>印库 · 管理后台</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .form-row{display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:flex-start}
+  .form-row label{font-size:13px;color:var(--ink-2);min-width:84px;padding-top:10px}
+  .form-row input,.form-row select,.form-row textarea{flex:1;min-width:180px}
+  .msg{margin-top:10px;font-size:14px;display:none}
+  .msg.ok{color:var(--ok-ink);display:block} .msg.bad{color:var(--bad-ink);display:block}
+  .act.sm{padding:5px 12px;font-size:12px}
+  .act.edit{background:var(--ok)} .act.del{background:var(--bad)}
+  td.ans{color:var(--ok-ink);font-weight:600}
+  .q-text{color:var(--ink-2)}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b>印库</b><span>管理后台</span></div>
+  <div class="nav"><a href="practice.html">← 练习</a><span id="count">加载中…</span></div>
+</header>
+<div class="wrap">
+  <div class="card">
+    <h2 id="formTitle" style="font-size:16px;margin:0 0 14px;color:var(--accent-ink)">➕ 加一道新题</h2>
+    <div class="form-row"><label>章节</label><input id="f_chapter" placeholder="如：第1章" value="第1章">
+      <label>知识点</label><input id="f_kp" placeholder="如：栈与队列"></div>
+    <div class="form-row"><label>题干</label><textarea id="f_question" placeholder="请输入题目内容"></textarea></div>
+    <div class="form-row"><label>A</label><input id="f_A" placeholder="选项 A">
+      <label>B</label><input id="f_B" placeholder="选项 B">
+      <label>C</label><input id="f_C" placeholder="选项 C">
+      <label>D</label><input id="f_D" placeholder="选项 D"></div>
+    <div class="form-row"><label>正确答案</label><select id="f_answer">
+        <option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select>
+      <label>解析</label><textarea id="f_parsing" placeholder="为什么选这个（可先留空）"></textarea></div>
+    <button class="act" id="saveBtn" onclick="saveQuestion()">保存新题</button>
+    <button class="act ghost" id="cancelBtn" onclick="cancelEdit()" style="display:none">取消编辑</button>
+    <div class="msg" id="msg"></div>
+  </div>
+  <div class="card">
+    <h2 style="font-size:16px;margin:0 0 14px">📋 全部题目</h2>
+    <table><thead><tr><th>ID</th><th>章节</th><th>知识点</th><th>题干</th><th>答案</th><th>操作</th></tr></thead>
+      <tbody id="tbody"></tbody></table>
+  </div>
+</div>
+<script>
+const API = "http://127.0.0.1:8000";
+let allQuestions = []; let editingId = null;
+function esc(s){return (s||"").toString().replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));}
+function showMsg(text, ok){ const msg=document.getElementById("msg"); msg.className=ok?"msg ok":"msg bad"; msg.textContent=text; }
+async function loadList(){
+  try{
+    const resp = await fetch(API + "/admin/questions"); allQuestions = await resp.json();
+    const tb = document.getElementById("tbody");
+    tb.innerHTML = allQuestions.map(q=>`
+      <tr><td>${esc(q.id)}</td><td>${esc(q.chapter)}</td><td>${esc(q.knowledge_point)}</td>
+        <td class="q-text" title="${esc(q.question)}">${esc(q.question)}</td>
+        <td class="ans">${esc(q.answer)}</td>
+        <td><button class="act edit sm" onclick='editQuestion(${JSON.stringify(q).replace(/'/g,"&#39;")})'>✏️ 编辑</button>
+            <button class="act del sm" onclick="deleteQuestion('${esc(q.id)}')">🗑️ 删除</button></td></tr>`).join("");
+    document.getElementById("count").textContent = "共 " + allQuestions.length + " 道题";
+  }catch(e){ document.getElementById("count").textContent = "加载失败：" + e.message; }
+}
+function editQuestion(q){
+  editingId = q.id;
+  document.getElementById("formTitle").textContent = "✏️ 正在编辑 " + q.id;
+  document.getElementById("f_chapter").value = q.chapter || "";
+  document.getElementById("f_kp").value = q.knowledge_point || "";
+  document.getElementById("f_question").value = q.question || "";
+  document.getElementById("f_A").value = (q.options && q.options.A) || "";
+  document.getElementById("f_B").value = (q.options && q.options.B) || "";
+  document.getElementById("f_C").value = (q.options && q.options.C) || "";
+  document.getElementById("f_D").value = (q.options && q.options.D) || "";
+  document.getElementById("f_answer").value = q.answer || "A";
+  document.getElementById("f_parsing").value = q.parsing || "";
+  document.getElementById("saveBtn").textContent = "保存修改";
+  document.getElementById("cancelBtn").style.display = "inline-block";
+  window.scrollTo({ top:0, behavior:"smooth" }); showMsg("", true);
+}
+function cancelEdit(){
+  editingId = null;
+  document.getElementById("formTitle").textContent = "➕ 加一道新题";
+  document.getElementById("saveBtn").textContent = "保存新题";
+  document.getElementById("cancelBtn").style.display = "none";
+  ["f_question","f_A","f_B","f_C","f_D","f_parsing"].forEach(id=>document.getElementById(id).value="");
+  showMsg("", true);
+}
+function collectForm(){
+  return {
+    question: document.getElementById("f_question").value.trim(),
+    options: { A:document.getElementById("f_A").value.trim(), B:document.getElementById("f_B").value.trim(),
+      C:document.getElementById("f_C").value.trim(), D:document.getElementById("f_D").value.trim() },
+    answer: document.getElementById("f_answer").value,
+    chapter: document.getElementById("f_chapter").value.trim(),
+    knowledge_point: document.getElementById("f_kp").value.trim(),
+    parsing: document.getElementById("f_parsing").value.trim()
+  };
+}
+async function saveQuestion(){
+  const data = collectForm();
+  if(!data.question){ showMsg("题干不能为空", false); return; }
+  if(!data.options.A || !data.options.B){ showMsg("选项 A、B 不能为空", false); return; }
+  if(!data.options[data.answer]){ showMsg("正确答案对应的选项内容不能为空", false); return; }
+  const url = editingId ? API + "/admin/update" : API + "/admin/add";
+  if(editingId) data.id = editingId;
+  try{
+    const resp = await fetch(url, { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify(data) });
+    const d = await resp.json();
+    if(d.error){ showMsg("保存失败：" + d.error, false); return; }
+    showMsg("✅ " + d.message, true); cancelEdit(); loadList();
+  }catch(e){ showMsg("保存失败：" + e.message, false); }
+}
+async function deleteQuestion(id){
+  if(!confirm("确定删除题目 " + id + "？删除后不可恢复！")) return;
+  try{
+    const resp = await fetch(API + "/admin/delete", { method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({ id:id }) });
+    const d = await resp.json();
+    if(d.error){ alert("删除失败：" + d.error); return; }
+    alert("✅ " + d.message); if(editingId === id) cancelEdit(); loadList();
+  }catch(e){ alert("删除失败：" + e.message); }
+}
+loadList();
+</script>
+</body>
+</html>

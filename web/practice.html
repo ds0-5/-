@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>印库 · 以题代练</title>
+<link rel="stylesheet" href="theme.css">
+<style>
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .toolbar a{text-decoration:none;color:var(--accent);font-size:14px;font-weight:500;
+    padding:8px 14px;border:1px solid var(--line);border-radius:999px;background:var(--glass-strong);
+    transition:transform var(--t) var(--ease-out),box-shadow var(--t)}
+  .toolbar a:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b>印库</b><span>以题代练</span></div>
+  <div class="nav"><a href="bookshelf.html">← 书架</a><a href="stats.html">📊 统计</a></div>
+</header>
+<div class="wrap">
+  <div class="meta" id="meta">加载中…</div>
+  <div class="toolbar">
+    <a href="javascript:recommendNext()">🎯 按薄弱点推荐一题</a>
+    <a href="study.html">📖 主观题</a>
+    <a href="stats.html">📕 错题本</a>
+    <a href="javascript:generateSimilar()">✨ AI 出相似题</a>
+  </div>
+  <div id="qBox"></div>
+  <div class="result" id="result"></div>
+</div>
+<script>
+const API = "http://127.0.0.1:8000";
+const CHAPTER = new URLSearchParams(location.search).get("chapter") || "";
+const UID = localStorage.getItem("yinku_uid") || "u1";
+if(!localStorage.getItem("yinku_uid")){ location.href="login.html"; }
+let allQuestions = [];
+let currentIndex = 0;
+let selectedAnswer = null;
+async function loadQuestions() {
+  try {
+    const resp = await fetch(API + "/questions" + (CHAPTER ? "?chapter=" + encodeURIComponent(CHAPTER) : ""));
+    const data = await resp.json();
+    if (!Array.isArray(data) || data.length === 0) { document.getElementById("meta").textContent = "题库为空"; return; }
+    allQuestions = data; renderQuestion();
+  } catch (e) { document.getElementById("meta").textContent = "无法连接后端：" + e.message + "（确认 uvicorn 在跑？）"; }
+}
+function renderQuestion() {
+  const q = allQuestions[currentIndex];
+  document.getElementById("meta").textContent =
+    `第 ${currentIndex + 1} 题 / 共 ${allQuestions.length} 题 · ${q.course}${CHAPTER ? " · 📂" + CHAPTER : ""} · ${q.knowledge_point}`;
+  const opts = q.options || {}; const optKeys = Object.keys(opts);
+  document.getElementById("qBox").innerHTML = `
+    <div class="q-card">
+      <div class="q-text">${escapeHtml(q.question)}</div>
+      <div class="options">
+        ${optKeys.map(k => `<div class="opt" data-key="${k}" onclick="pick('${k}', this)"><b>${k}.</b> ${escapeHtml(opts[k])}</div>`).join("")}
+      </div>
+      <button class="act" id="submitBtn" onclick="submitAnswer()" disabled>提交答案</button>
+      <button class="act ghost" id="nextBtn" onclick="nextQuestion()" style="display:none">下一题</button>
+    </div>`;
+  document.getElementById("result").classList.remove("show", "ok", "bad");
+  document.getElementById("result").innerHTML = ""; selectedAnswer = null;
+}
+function pick(key, el) {
+  if (document.getElementById("nextBtn").style.display === "inline-block") return;
+  selectedAnswer = key;
+  document.querySelectorAll(".opt").forEach(o => o.classList.remove("selected"));
+  el.classList.add("selected"); document.getElementById("submitBtn").disabled = false;
+}
+async function submitAnswer() {
+  if (!selectedAnswer) return;
+  document.getElementById("submitBtn").disabled = true;
+  try {
+    const resp = await fetch(API + "/check", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ index:currentIndex, answer:selectedAnswer, chapter:CHAPTER, user_id:UID }) });
+    const data = await resp.json(); showResult(data);
+    fetch(API + "/records", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ index:currentIndex, answer:selectedAnswer, chapter:CHAPTER, user_id:UID }) }).catch(()=>{});
+  } catch (e) { alert("判题失败：" + e.message); document.getElementById("submitBtn").disabled = false; }
+}
+function showResult(data) {
+  const correctKey = (data.answer || "").toUpperCase();
+  document.querySelectorAll(".opt").forEach(o => {
+    const k = (o.dataset.key || "").toUpperCase();
+    if (k === correctKey) o.classList.add("correct");
+    if (k === (selectedAnswer || "").toUpperCase() && !data.correct) o.classList.add("wrong");
+  });
+  const r = document.getElementById("result");
+  r.classList.add("show"); r.classList.add(data.correct ? "ok" : "bad");
+  r.innerHTML = `
+    <div><span class="tag ${data.correct ? "tag-ok" : "tag-bad"}">${data.correct ? "✓ 答对了" : "✗ 答错了"}</span>
+      你的答案：<b>${escapeHtml(data.your_answer)}</b>　正确答案：<b>${escapeHtml(data.answer)}</b></div>
+    <div class="parsing"><b>解析：</b>${escapeHtml(data.parsing)}</div>
+    ${data.common_errors ? `<div class="parsing"><b>常见错误：</b>${escapeHtml(data.common_errors)}</div>` : ""}`;
+  document.getElementById("submitBtn").style.display = "none";
+  const nextBtn = document.getElementById("nextBtn");
+  nextBtn.textContent = (currentIndex + 1 < allQuestions.length) ? "下一题 →" : "已练完，刷新重练";
+  nextBtn.style.display = "inline-block";
+  r.innerHTML += `<div class="parsing" id="aiBox"><b>🤖 AI 讲解：</b>加载中…</div>`;
+  fetchExplain();
+}
+function nextQuestion() {
+  if (currentIndex + 1 < allQuestions.length) { currentIndex++; renderQuestion(); }
+  else { if (confirm("已练完所有题目，刷新重新开始？")) location.reload(); }
+}
+function escapeHtml(s) {
+  return (s || "").toString().replace(/[&<>"']/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[c]));
+}
+async function recommendNext() {
+  if (CHAPTER) { alert("章节练习模式请按顺序刷，薄弱推荐在总题库用～"); return; }
+  try {
+    const resp = await fetch(API + "/recommend"); const data = await resp.json();
+    if (data.error) { alert(data.error); return; }
+    currentIndex = data.index; renderQuestion();
+    document.getElementById("meta").textContent += "　← 推荐理由：" + data.reason;
+  } catch (e) { alert("推荐失败：" + e.message); }
+}
+async function fetchExplain() {
+  const aiBox = document.getElementById("aiBox"); if (!aiBox) return;
+  try {
+    const resp = await fetch(API + "/explain", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ index:currentIndex, answer:selectedAnswer, chapter:CHAPTER }) });
+    const d = await resp.json();
+    const bookTip = (d.book_used && d.book_chapter) ? `<div class="book-tip">📖 已翻『${escapeHtml(d.book_chapter)}』老师考点笔记讲解</div>` : "";
+    if (d.ai_explain) aiBox.innerHTML = bookTip + "<b>🤖 AI 讲解：</b><br>" + escapeHtml(d.ai_explain).replace(/\n/g, "<br>");
+    else aiBox.innerHTML = bookTip + "<b>🤖 AI 讲解：</b>（模型没返回，先看上面人工解析）";
+  } catch (e) { aiBox.innerHTML = "<b>🤖 AI 讲解：</b>（AI 服务连不上，先看上面人工解析）"; }
+}
+async function generateSimilar() {
+  const btn = document.querySelector('a[href="javascript:generateSimilar()"]');
+  if (btn) btn.textContent = "✨ AI 出题中…（约 10~30 秒）";
+  try {
+    const resp = await fetch(API + "/generate-similar", { method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({ index:currentIndex, chapter:CHAPTER }) });
+    const data = await resp.json();
+    if (data.error) { alert(data.error); return; }
+    allQuestions.push(data.question); currentIndex = data.index; renderQuestion();
+    document.getElementById("meta").textContent += "　✨ 这是 AI 现出的相似题";
+  } catch (e) { alert("出题失败：" + e.message); }
+  finally { if (btn) btn.textContent = "✨ AI 出相似题"; }
+}
+loadQuestions();
+</script>
+</body>
+</html>
