@@ -31,7 +31,7 @@ def check_answer(payload: dict):
     questions = load_questions(chapter=chapter) + gen_bank    # gen_bank：AI 临时出的题也能判
     idx = payload.get("index")                    # 第几题（从 0 开始）
     user_ans = (payload.get("answer") or "").strip().upper()   # 用户答案，去空格+转大写（B 和 b 都算对）
-    if idx is None or not (0 <= idx < len(questions)):
+    if not isinstance(idx, int) or not (0 <= idx < len(questions)):
         return JSONResponse(content={"error": "题目索引无效"}, status_code=400)
     q = questions[idx]
     correct_ans = (q.get("answer") or "").strip().upper()      # 标准答案也统一大写再比

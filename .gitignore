@@ -6,3 +6,12 @@ __pycache__/
 venv/
 
 .workbuddy-ai/
+
+# 二进制向量库：每次跑都会变，可用 build_index.py 重建
+data/chroma_db/
+
+# 数据库备份文件
+*.bak
+
+# 对话记录备份，不属于项目
+印库对话记录备份*.md
