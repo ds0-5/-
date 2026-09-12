@@ -12,7 +12,8 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 
-from app.services.rag_service import hybrid_search
+
+from app.services.rag_service import hybrid_search  # noqa: E402
 
 CASES = Path(__file__).resolve().parent / "cases.md"
 TOP_K = 3
