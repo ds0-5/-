@@ -17,9 +17,10 @@
 </div>
 <script>
 const API = "http://127.0.0.1:8000";
+const UID = localStorage.getItem("yinku_uid") || "";
 async function loadWeakpoints() {
   try {
-    const resp = await fetch(API + "/stats/weakpoints"); const data = await resp.json();
+    const resp = await fetch(API + "/stats/weakpoints?user_id=" + encodeURIComponent(UID)); const data = await resp.json();
     const box = document.getElementById("weakList");
     if (!data.weakpoints || data.weakpoints.length === 0) { box.innerHTML = "还没有练习记录，先去 <a class='link' href='practice.html'>练习</a> 几道题吧。"; return; }
     let rows = "";
@@ -33,7 +34,7 @@ async function loadWeakpoints() {
 }
 async function loadWrong() {
   try {
-    const resp = await fetch(API + "/wrong"); const data = await resp.json();
+    const resp = await fetch(API + "/wrong?user_id=" + encodeURIComponent(UID)); const data = await resp.json();
     const box = document.getElementById("wrongList");
     if (!data.wrong_questions || data.wrong_questions.length === 0) { box.innerHTML = "暂无错题，继续保持！🎉"; return; }
     let html = "";

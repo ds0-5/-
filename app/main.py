@@ -1,9 +1,11 @@
 # 印库 v1 第二格：FastAPI 读 cards.json，支持按分类筛选
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 import json
 import os
+import time
+import logging
 import re
 import httpx
 import sqlite3
@@ -58,6 +60,23 @@ app.add_middleware(
     allow_headers=["*"],       # 允许所有请求头
 )
 
+
+# ===== 请求耗时统计：每个请求都要经过这里，记一行日志 =====
+logger = logging.getLogger("yinku.request")
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start = time.perf_counter()                      # 按下秒表
+    response = await call_next(request)              # 放行，等接口跑完
+    cost_ms = (time.perf_counter() - start) * 1000   # 花了多少毫秒
+    logger.info("%s %s -> %s | %.1f ms",
+                request.method, request.url.path, response.status_code, cost_ms)
+    if cost_ms > 500:                                # 超过 500 毫秒算慢
+        logger.warning("慢请求: %s %s 耗时 %.0f ms",
+                       request.method, request.url.path, cost_ms)
+    return response
+
+
 # ============================================================
 # 以题代练：题库 + 判题（第一阶段）
 # ============================================================
@@ -66,7 +85,8 @@ DB_PATH = settings.db_path  # 改从配置层读取，值不变，仍是 data/yi
 
 # ===== 用户档案表：支持"书架→点书→弹窗建档→AI诊断"流程（step two） =====
 def init_db():
-    """启动时确保 profiles 表存在；questions/records 由导入脚本建，这里只补档案表。"""
+    """启动时确保 users / profiles / srs 表存在；questions/records 由导入脚本建。"""
+    conn = sqlite3.connect(DB_PATH)          # 先架锅，再炒菜
     conn.execute("""CREATE TABLE IF NOT EXISTS users (
     user_id       TEXT PRIMARY KEY,
     username      TEXT UNIQUE,
@@ -74,7 +94,6 @@ def init_db():
     salt          TEXT,
     created_at    TEXT
 )""")
-    conn = sqlite3.connect(DB_PATH)
     conn.execute("""CREATE TABLE IF NOT EXISTS profiles (
         user_id      TEXT PRIMARY KEY,   -- 用户标识（先用设备id，接小程序再换 openid）
         school       TEXT,               -- 学校
@@ -98,3 +117,7 @@ def init_db():
     )""")
     conn.commit()
     conn.close()
+    print("[启动自检] 数据库表已就绪")
+
+
+init_db()          # 模块被加载时自动跑一次：确保三张表都在

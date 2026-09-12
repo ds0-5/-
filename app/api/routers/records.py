@@ -27,6 +27,7 @@ def add_record(payload: dict):
         "correct": correct,                  # 对错
         "your_answer": user_ans,             # 你答了什么
         "answer": q.get("answer", ""),       # 正确答案
+        "user_id": payload.get("user_id") or "",   # 谁答的
     }
     records.append(record)
     save_records(records)
@@ -34,12 +35,14 @@ def add_record(payload: dict):
 
 # 薄弱知识点：翻 records，按知识点聚合算错误率，最薄弱的排最前
 @router.get("/stats/weakpoints")
-def weakpoints():
+def weakpoints(user_id: str = ""):
     records = load_records()
     if not records:
         return JSONResponse(content={"total_records": 0, "weakpoints": []})
     agg = {}
     for r in records:
+        if user_id and (r.get("user_id") or "") != user_id:
+            continue                        # 不是这个人的，跳过
         kp = r.get("knowledge_point") or "未知知识点"
         if kp not in agg:
             agg[kp] = {"total": 0, "correct": 0, "wrong": 0}
@@ -109,3 +112,36 @@ def recommend():
         "question": q.get("question"),
         "options": q.get("options"),
     })
+
+
+# 错题本：把答错过的题挑出来，统计每题错了几次
+@router.get("/wrong")
+def wrong_questions(user_id: str = ""):
+    questions = load_questions()      # 题库：拿题干、选项、解析
+    records = load_records()          # 答题卡：拿对错、题号
+
+    # 第一步：数一数每道题错了几次
+    wrong_count = {}
+    for r in records:
+        if r.get("correct"):
+            continue                        # 答对的不算
+        if user_id and (r.get("user_id") or "") != user_id:
+            continue                        # 不是这个人的，跳过
+        qid = r.get("question_id")
+        wrong_count[qid] = wrong_count.get(qid, 0) + 1
+
+    # 第二步：拿题号去题库，把题目换出来
+    result = []
+    for q in questions:
+        if q.get("id") in wrong_count:        # 这道题在错题名单里
+            result.append({
+                "question": q.get("question"),
+                "options": q.get("options"),
+                "answer": q.get("answer"),
+                "wrong_times": wrong_count[q.get("id")],
+                "knowledge_point": q.get("knowledge_point"),
+                "parsing": q.get("parsing"),
+                "common_errors": q.get("common_errors"),
+            })
+
+    return JSONResponse(content={"wrong_questions": result})

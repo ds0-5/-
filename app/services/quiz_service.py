@@ -53,7 +53,7 @@ def srs_update(uid, qid, correct):
 def load_questions(course: str = "", chapter: str = ""):
     conn = sqlite3.connect(settings.db_path)          # 连数据库
     conn.row_factory = sqlite3.Row           # 行能用列名取值（像字典）
-    sql = "SELECT * FROM questions WHERE type NOT IN ('fill','apply','comprehensive')"
+    sql = "SELECT * FROM questions WHERE 1=1"
     args = []
     if course:
         sql += " AND course=?"; args.append(course)
@@ -94,6 +94,7 @@ def load_records():
             "correct": bool(r["correct"]),
             "your_answer": r["your_answer"],
             "answer": r["answer"],
+            "user_id": r["user_id"],
         })
     return records
 
@@ -104,7 +105,7 @@ def save_records(records):
     cur.execute("DELETE FROM records")            # 清空旧数据
     for rec in records:
         cur.execute(
-            "INSERT INTO records (ts, question_id, idx, knowledge_point, correct, your_answer, answer) VALUES (?,?,?,?,?,?,?)",
+            "INSERT INTO records (ts, question_id, idx, knowledge_point, correct, your_answer, answer, user_id) VALUES (?,?,?,?,?,?,?,?)",
             (
                 rec.get("ts"),
                 rec.get("question_id"),
@@ -113,6 +114,7 @@ def save_records(records):
                 1 if rec.get("correct") else 0,
                 rec.get("your_answer"),
                 rec.get("answer"),
+                rec.get("user_id"),
             ),
         )
     conn.commit()                                 # 提交才真正写入
