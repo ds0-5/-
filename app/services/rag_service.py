@@ -95,8 +95,11 @@ def _tok(t):
     if not t:
         return []
     toks = re.findall(r'[a-zA-Z0-9]+', t.lower())
-    toks += re.findall(r'[\u4e00-\u9fff]', t)
-    return [x for x in toks if x not in _STOP or len(x) > 1]
+    for seg in re.findall(r'[\u4e00-\u9fff]+', t):
+        toks += list(seg)                                       # 单字
+        if len(seg) > 1:
+            toks += [seg[i:i + 2] for i in range(len(seg) - 1)]  # 双字
+    return toks
 
 
 def _bm25_index():
