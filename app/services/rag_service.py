@@ -11,7 +11,7 @@ from app.config import BASE_DIR, settings
 
 DATA_DIR = str(BASE_DIR / "data")
 CHROMA_DIR = os.path.join(DATA_DIR, "chroma_db")
-EMBED_MODEL = "nomic-embed-text"
+EMBED_MODEL = "bge-m3"
 OLLAMA_URL = "http://127.0.0.1:11434"
 DB_PATH = settings.db_path
 
