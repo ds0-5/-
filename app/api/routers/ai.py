@@ -1,10 +1,12 @@
-from fastapi import APIRouter
-from fastapi.responses import JSONResponse
 import json
 import os
 import re
+
 import httpx
-from app.config import settings, BASE_DIR
+from fastapi import APIRouter
+from fastapi.responses import JSONResponse
+
+from app.config import BASE_DIR
 from app.services.quiz_service import gen_bank, load_questions
 
 router = APIRouter()

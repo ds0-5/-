@@ -3,3 +3,7 @@ target-version = "py311"
 exclude = ["app/main.py"]   # Phase A 先放过巨无霸，等 Phase B 拆完再整体格式化
 [lint]
 select = ["E", "F", "I", "W"]   # pycodestyle + pyflakes + isort + warnings
+ignore = [
+    "E501",   # 行太长：长 SQL / prompt 字符串拆不开，硬拆更难读
+    "E702",   # 一行多语句（分号）：存量代码较多，暂不强制
+]

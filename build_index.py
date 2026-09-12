@@ -2,8 +2,9 @@
 # 真 RAG 第2步：把 yinku.db 里的题转成向量，存进 Chroma 本地文件库
 # 运行：印库根目录 venv\Scripts\python.exe build_index.py
 import sqlite3
-import httpx
+
 import chromadb
+import httpx
 
 DB_PATH = r"C:\Users\36085\Desktop\印库\data\yinku.db"
 CHROMA_DIR = r"C:\Users\36085\Desktop\印库\data\chroma_db"

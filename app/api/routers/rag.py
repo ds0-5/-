@@ -1,7 +1,8 @@
+import httpx
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-import httpx
-from app.services.rag_service import hybrid_search, OLLAMA_URL
+
+from app.services.rag_service import OLLAMA_URL, hybrid_search
 
 router = APIRouter()
 

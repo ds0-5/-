@@ -1,7 +1,8 @@
 # 统一异常处理：未捕获异常 -> 统一 JSON 错误体，不把堆栈甩给前端
+import logging
+
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
-import logging
 
 logger = logging.getLogger("yinku.error")
 

@@ -1,9 +1,12 @@
+import json
+import sqlite3
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-import sqlite3, json
+
 from app.config import settings
 from app.services.quiz_service import load_questions
-from app.services.rag_service import index_question_by_id, delete_question_from_index
+from app.services.rag_service import delete_question_from_index, index_question_by_id
 
 router = APIRouter()
 DB_PATH = settings.db_path

@@ -1,11 +1,13 @@
 # RAG 检索引擎 + 题库向量索引同步（被 admin / rag 两个路由共用）
+import math
 import os
 import re
-import math
 import sqlite3
-import httpx
+
 import chromadb
-from app.config import settings, BASE_DIR
+import httpx
+
+from app.config import BASE_DIR, settings
 
 DATA_DIR = str(BASE_DIR / "data")
 CHROMA_DIR = os.path.join(DATA_DIR, "chroma_db")

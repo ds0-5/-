@@ -1,6 +1,7 @@
 # 配置层：所有可变配置走环境变量（.env），不写死在代码里 —— 大厂红线
-from pydantic_settings import BaseSettings, SettingsConfigDict
 from pathlib import Path
+
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 BASE_DIR = Path(__file__).resolve().parent.parent  # 印库根目录
 

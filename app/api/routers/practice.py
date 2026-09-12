@@ -2,7 +2,7 @@
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
-from app.services.quiz_service import load_questions, srs_update, gen_bank
+from app.services.quiz_service import gen_bank, load_questions, srs_update
 
 router = APIRouter()
 

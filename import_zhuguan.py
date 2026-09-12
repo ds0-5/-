@@ -1,6 +1,7 @@
 # 运行：印库根目录 venv\Scripts\python.exe import_zhuguan.py
 # 第2铲：把老师题库里的主观题（填空/应用/综合）导入 yinku.db
-import json, sqlite3
+import json
+import sqlite3
 
 SRC = r"C:\Users\36085\Desktop\数据结构与算法知识库\04_题库.json"
 DB_PATH = r"C:\Users\36085\Desktop\印库\data\yinku.db"

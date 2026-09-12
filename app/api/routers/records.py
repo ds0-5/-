@@ -1,7 +1,8 @@
+from datetime import datetime
+
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
-from datetime import datetime
-from app.config import settings
+
 from app.services.quiz_service import gen_bank, load_questions, load_records, save_records
 
 router = APIRouter()
