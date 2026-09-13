@@ -25,7 +25,10 @@ CREATE TABLE IF NOT EXISTS questions (
     options TEXT,                 -- 选项（字典，下面转成 JSON 字符串存）
     answer TEXT,                  -- 答案
     parsing TEXT,                 -- 解析
-    common_errors TEXT            -- 常见错误
+    common_errors TEXT,           -- 常见错误
+    knowledge_type TEXT,          -- 知识类型（记忆/概念/流程/设计）
+    weight TEXT                   -- 考点权重（核心/普通/边缘）
+
 )
 """)
 cur.execute("""
