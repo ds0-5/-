@@ -21,6 +21,8 @@ def get_questions(course: str = "", chapter: str = ""):
             "difficulty": q.get("difficulty"),
             "question": q.get("question"),
             "options": q.get("options"),
+            "weight": q.get("weight") or "普通",
+            "knowledge_type": q.get("knowledge_type") or "概念",
         })
     return JSONResponse(content=safe)
 

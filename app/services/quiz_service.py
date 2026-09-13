@@ -103,7 +103,10 @@ def load_questions(course: str = "", chapter: str = ""):
             "answer": r["answer"],
             "parsing": r["parsing"],
             "common_errors": r["common_errors"],
+            "weight": r["weight"] or "普通",
+            "knowledge_type": r["knowledge_type"] or "概念",
         })
+
     return questions
 
 

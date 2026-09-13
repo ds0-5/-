@@ -47,8 +47,11 @@ async function loadQuestions() {
 }
 function renderQuestion() {
   const q = allQuestions[currentIndex];
-  document.getElementById("meta").textContent =
-    `第 ${currentIndex + 1} 题 / 共 ${allQuestions.length} 题 · ${q.course}${CHAPTER ? " · 📂" + CHAPTER : ""} · ${q.knowledge_point}`;
+  const wColor = q.weight === "核心" ? "#e24b4a" : (q.weight === "边缘" ? "#888780" : "#ba7517");
+  document.getElementById("meta").innerHTML =
+    `第 ${currentIndex + 1} 题 / 共 ${allQuestions.length} 题 · ${escapeHtml(q.course)}${CHAPTER ? " · 📂" + escapeHtml(CHAPTER) : ""} · ${escapeHtml(q.knowledge_point)}` +
+    ` <span style="color:${wColor};font-weight:500">● ${escapeHtml(q.weight || "普通")}考点</span>` +
+    ` <span style="opacity:.6">(${escapeHtml(q.knowledge_type || "概念")}型)</span>`;
   const opts = q.options || {}; const optKeys = Object.keys(opts);
   document.getElementById("qBox").innerHTML = `
     <div class="q-card">
