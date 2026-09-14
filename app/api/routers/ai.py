@@ -4,6 +4,7 @@ import re
 
 import httpx
 from fastapi import APIRouter
+from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 
 from app.config import BASE_DIR
@@ -112,7 +113,7 @@ def generate_similar(payload: dict):
 # AI 讲解：答完一题后，让本地 Ollama 用大白话讲一遍：考什么、错在哪、怎么想
 # 独立接口的原因：判题 /check 要秒回，不能等模型慢慢转；AI 讲解是"增值"，慢点无所谓
 @router.post("/explain")
-def ai_explain(payload: dict):
+async def ai_explain(payload: dict):
     chapter = payload.get("chapter") or ""  # 章节筛选：讲解的题和练习的是同一章
     questions = load_questions(chapter=chapter) + gen_bank  # gen_bank：AI 临时出的题也能讲解
     idx = payload.get("index")
@@ -132,9 +133,10 @@ def ai_explain(payload: dict):
     related = []
     similar_section = ""
     try:
-        related = hybrid_search(
+        related = await run_in_threadpool(
+            hybrid_search,
             (q.get("question") or "") + " " + (q.get("knowledge_point") or ""),
-            top_k=3,
+            3,
         )
         related = [it for it in related if it.get("id") != q.get("id")]  # 去掉它自己
         if related:
@@ -172,9 +174,10 @@ def ai_explain(payload: dict):
 
     ollama_url = "http://127.0.0.1:11434/api/generate"
     try:
-        resp = httpx.post(
-            ollama_url, json={"model": "qwen2.5:7b", "prompt": prompt, "stream": False}, timeout=60
-        )
+        async with httpx.AsyncClient(timeout=60) as client:
+            resp = await client.post(
+                ollama_url, json={"model": "qwen2.5:7b", "prompt": prompt, "stream": False}
+            )
         data = resp.json()
         return JSONResponse(
             content={
