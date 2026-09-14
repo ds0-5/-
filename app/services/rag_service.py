@@ -12,7 +12,7 @@ from app.config import BASE_DIR, settings
 DATA_DIR = str(BASE_DIR / "data")
 CHROMA_DIR = os.path.join(DATA_DIR, "chroma_db")
 EMBED_MODEL = "bge-m3"
-OLLAMA_URL = "http://127.0.0.1:11434"
+OLLAMA_URL = settings.ollama_url
 DB_PATH = settings.db_path
 
 # 全局缓存：Chroma 只连一次，不用每次请求都重连

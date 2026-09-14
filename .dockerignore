@@ -1,0 +1,20 @@
+# Docker 打包时忽略的东西
+# 不忽略的话，镜像会有几个 GB
+
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+
+.git/
+.gitignore
+
+.workbuddy-ai/
+eval/
+docs/
+
+.env
+
+# 根目录的 md 文档（data/ 里的考点笔记要保留，不能一起排除）
+/*.md

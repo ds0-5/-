@@ -7,7 +7,7 @@ from fastapi import APIRouter
 from fastapi.concurrency import run_in_threadpool
 from fastapi.responses import JSONResponse
 
-from app.config import BASE_DIR
+from app.config import BASE_DIR, settings
 from app.services.quiz_service import gen_bank, load_questions
 from app.services.rag_service import hybrid_search
 
@@ -55,7 +55,7 @@ def generate_similar(payload: dict):
         '{"question": "题干", "options": {"A": "选项A", "B": "选项B", "C": "选项C", "D": "选项D"}, "answer": "正确项字母", "parsing": "解析", "common_errors": "常见错误"}\n'
         "要求：答案必须唯一且正确；解析要讲清思路。"
     )
-    ollama_url = "http://127.0.0.1:11434/api/generate"
+    ollama_url = settings.ollama_url + "/api/generate"
     try:
         resp = httpx.post(
             ollama_url, json={"model": "qwen2.5:7b", "prompt": prompt, "stream": False}, timeout=120
@@ -172,12 +172,15 @@ async def ai_explain(payload: dict):
         + "\n\n请用 3~5 句话：①一句话说这道题考什么知识点；②如果答错了，点破他错在哪；③再用大白话把正确思路讲一遍。如果上面给了老师笔记，要结合笔记里的重点和易错点讲。最后另起一行，用「【再练这几道】」开头，把上面相似题里的题号原样抄下来（有几个写几个，不许自己编题号）。"
     )
 
-    ollama_url = "http://127.0.0.1:11434/api/generate"
+    ollama_url = settings.ollama_url + "/api/generate"
+
     try:
-        async with httpx.AsyncClient(timeout=60) as client:
-            resp = await client.post(
-                ollama_url, json={"model": "qwen2.5:7b", "prompt": prompt, "stream": False}
-            )
+        resp = await run_in_threadpool(
+            httpx.post,
+            ollama_url,
+            json={"model": "qwen2.5:7b", "prompt": prompt, "stream": False},
+            timeout=60,
+        )
         data = resp.json()
         return JSONResponse(
             content={

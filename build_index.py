@@ -11,7 +11,7 @@ from app.services.rag_service import EMBED_MODEL
 
 DB_PATH = settings.db_path
 CHROMA_DIR = str(BASE_DIR / "data" / "chroma_db")
-OLLAMA_URL = "http://127.0.0.1:11434"
+OLLAMA_URL = settings.ollama_url
 
 
 
