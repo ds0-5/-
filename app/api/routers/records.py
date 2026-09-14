@@ -1,8 +1,9 @@
 from datetime import datetime
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from app.security import current_user
 from app.services.quiz_service import gen_bank, load_questions, load_records, save_records
 
 router = APIRouter()
@@ -10,7 +11,7 @@ router = APIRouter()
 # 记录一次练习：前端把"第几题+答案"发来，后端自己判题、自己落库
 # 为什么后端再判一次：不信任前端报的"对错"，防止有人篡改记录数据
 @router.post("/records")
-def add_record(payload: dict):
+def add_record(payload: dict, uid: str = Depends(current_user)):
     chapter = payload.get("chapter") or ""      # 章节筛选：下标与 /questions 对齐，避免记错题
     questions = load_questions(chapter=chapter) + gen_bank    # gen_bank：AI 临时题也记录
     idx = payload.get("index")
@@ -28,7 +29,7 @@ def add_record(payload: dict):
         "correct": correct,                  # 对错
         "your_answer": user_ans,             # 你答了什么
         "answer": q.get("answer", ""),       # 正确答案
-        "user_id": payload.get("user_id") or "",   # 谁答的
+        "user_id": uid,   # 谁答的（从通行证取）
     }
     records.append(record)
     save_records(records)
@@ -36,13 +37,13 @@ def add_record(payload: dict):
 
 # 薄弱知识点：翻 records，按知识点聚合算错误率，最薄弱的排最前
 @router.get("/stats/weakpoints")
-def weakpoints(user_id: str = ""):
+def weakpoints(user_id: str = Depends(current_user)):
     records = load_records()
     if not records:
         return JSONResponse(content={"total_records": 0, "weakpoints": []})
     agg = {}
     for r in records:
-        if user_id and (r.get("user_id") or "") != user_id:
+        if (r.get("user_id") or "") != user_id:
             continue                        # 不是这个人的，跳过
         kp = r.get("knowledge_point") or "未知知识点"
         if kp not in agg:
@@ -117,7 +118,7 @@ def recommend():
 
 # 错题本：把答错过的题挑出来，统计每题错了几次
 @router.get("/wrong")
-def wrong_questions(user_id: str = ""):
+def wrong_questions(user_id: str = Depends(current_user)):
     questions = load_questions()      # 题库：拿题干、选项、解析
     records = load_records()          # 答题卡：拿对错、题号
 
@@ -126,7 +127,7 @@ def wrong_questions(user_id: str = ""):
     for r in records:
         if r.get("correct"):
             continue                        # 答对的不算
-        if user_id and (r.get("user_id") or "") != user_id:
+        if (r.get("user_id") or "") != user_id:
             continue                        # 不是这个人的，跳过
         qid = r.get("question_id")
         wrong_count[qid] = wrong_count.get(qid, 0) + 1

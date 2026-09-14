@@ -24,8 +24,8 @@ def test_rag_search():
     assert client.get("/rag/search", params={"q": "递归"}).status_code == 200
 
 def test_profile_needs_user():
-    # 缺 user_id 应 400（说明路由命中、只是校验拦下）
-    assert client.get("/profile").status_code == 400
+    # 没带通行证应 401（说明鉴权生效了）
+    assert client.get("/profile").status_code == 401
 
 def test_due_needs_user():
-    assert client.get("/due").status_code == 400
+    assert client.get("/due").status_code == 401

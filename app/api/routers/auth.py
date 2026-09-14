@@ -8,6 +8,7 @@ from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 
 from app.config import settings
+from app.security import make_token
 
 router = APIRouter()
 
@@ -40,7 +41,9 @@ def register(payload: dict):
     conn.execute("INSERT INTO users (user_id, username, password_hash, salt, created_at) VALUES (?,?,?,?,?)",
                  (user_id, username, password_hash, salt, datetime.now().isoformat(timespec="seconds")))
     conn.commit(); conn.close()
-    return JSONResponse(content={"user_id": user_id, "username": username})
+    # 注册完直接签发通行证，省得再登录一次
+    token = make_token(user_id)
+    return JSONResponse(content={"token": token, "user_id": user_id, "username": username})
 
 @router.post("/auth/login")
 def login(payload: dict):
@@ -51,4 +54,6 @@ def login(payload: dict):
     conn.close()
     if not row or _hash_password(password, row["salt"]) != row["password_hash"]:
         return JSONResponse(content={"error": "用户名或密码错误"}, status_code=401)
-    return JSONResponse(content={"user_id": row["user_id"], "username": row["username"]})
+    # 签发通行证（token），前端以后靠它证明身份
+    token = make_token(row["user_id"])
+    return JSONResponse(content={"token": token, "user_id": row["user_id"], "username": row["username"]})

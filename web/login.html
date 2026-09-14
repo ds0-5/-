@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>印库 · 登录</title>
+<script src="auth.js"></script>
 <style>
   *{box-sizing:border-box;margin:0;padding:0}
   body{font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",sans-serif;
@@ -38,7 +39,11 @@
 </div>
 <script>
 const API="http://127.0.0.1:8000";
-function setUid(uid){ localStorage.setItem("yinku_uid", uid); location.href="bookshelf.html"; }
+function setUid(uid, token){
+  localStorage.setItem("yinku_uid", uid);
+  if (token) localStorage.setItem("yinku_token", token);
+  location.href="bookshelf.html";
+}
 async function doRegister(){
   const username=document.getElementById("username").value.trim();
   const password=document.getElementById("password").value;
@@ -47,7 +52,7 @@ async function doRegister(){
   const r=await fetch(API+"/auth/register",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username,password})});
   const j=await r.json();
   if(r.status!==200){ hint.textContent="❌ "+(j.error||"注册失败"); return; }
-  setUid(j.user_id);
+  setUid(j.user_id, j.token);
 }
 async function doLogin(){
   const username=document.getElementById("username").value.trim();
@@ -56,7 +61,7 @@ async function doLogin(){
   const r=await fetch(API+"/auth/login",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({username,password})});
   const j=await r.json();
   if(r.status!==200){ hint.textContent="❌ "+(j.error||"登录失败"); return; }
-  setUid(j.user_id);
+  setUid(j.user_id, j.token);
 }
 </script>
 </body>

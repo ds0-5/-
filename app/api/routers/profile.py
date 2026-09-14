@@ -2,19 +2,17 @@ import sqlite3
 from datetime import datetime
 
 import httpx
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
 from app.config import settings
+from app.security import current_user
 
 router = APIRouter()
 
 # 建档/更新档案：user_id 唯一，重复建档就更新
 @router.post("/profile")
-def save_profile(payload: dict):
-    uid = (payload.get("user_id") or "").strip()
-    if not uid:
-        return JSONResponse(content={"error": "缺少 user_id"}, status_code=400)
+def save_profile(payload: dict, uid: str = Depends(current_user)):
     now = datetime.now().isoformat(timespec="seconds")
     conn = sqlite3.connect(settings.db_path)
     conn.execute(
@@ -32,9 +30,7 @@ def save_profile(payload: dict):
 
 
 @router.get("/profile")
-def get_profile(user_id: str = ""):
-    if not user_id:
-        return JSONResponse(content={"error": "缺少 user_id"}, status_code=400)
+def get_profile(user_id: str = Depends(current_user)):
     conn = sqlite3.connect(settings.db_path)
     conn.row_factory = sqlite3.Row
     r = conn.execute("SELECT * FROM profiles WHERE user_id=?", (user_id,)).fetchone()
@@ -46,10 +42,7 @@ def get_profile(user_id: str = ""):
 
 # AI 诊断 + 学习路径：弹窗点"生成方案"时调用，需要用户已建档
 @router.post("/diagnose")
-def diagnose(payload: dict):
-    uid = (payload.get("user_id") or "").strip()
-    if not uid:
-        return JSONResponse(content={"error": "缺少 user_id"}, status_code=400)
+def diagnose(payload: dict, uid: str = Depends(current_user)):
     conn = sqlite3.connect(settings.db_path)
     conn.row_factory = sqlite3.Row
     prof = conn.execute("SELECT * FROM profiles WHERE user_id=?", (uid,)).fetchone()

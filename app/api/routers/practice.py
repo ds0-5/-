@@ -1,7 +1,8 @@
 # 刷题 & 判题路由：只管"接请求、回结果"，活儿都调 quiz_service 里的函数
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from fastapi.responses import JSONResponse
 
+from app.security import current_user
 from app.services.quiz_service import gen_bank, load_questions, srs_update
 
 router = APIRouter()
@@ -28,7 +29,7 @@ def get_questions(course: str = "", chapter: str = ""):
 
 # 判题接口
 @router.post("/check")
-def check_answer(payload: dict):
+def check_answer(payload: dict, uid: str = Depends(current_user)):
     chapter = payload.get("chapter") or ""      # 章节筛选：保证下标和 /questions 对齐
     questions = load_questions(chapter=chapter) + gen_bank    # gen_bank：AI 临时出的题也能判
     idx = payload.get("index")                    # 第几题（从 0 开始）
@@ -37,9 +38,7 @@ def check_answer(payload: dict):
         return JSONResponse(content={"error": "题目索引无效"}, status_code=400)
     q = questions[idx]
     correct_ans = (q.get("answer") or "").strip().upper()      # 标准答案也统一大写再比
-    uid = payload.get("user_id") or ""
-    if uid:
-        srs_update(uid, q.get("id"), user_ans == correct_ans)
+    srs_update(uid, q.get("id"), user_ans == correct_ans)
     return JSONResponse(content={
         "correct": user_ans == correct_ans,
         "your_answer": user_ans,
