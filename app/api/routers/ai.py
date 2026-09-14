@@ -69,7 +69,7 @@ def generate_similar(payload: dict):
     if not m:
         return JSONResponse(content={"error": "模型没返回 JSON，再试一次"}, status_code=500)
     try:
-        g = json.loads(m.group(0))
+        g = json.loads(m.group(0), strict=False)
     except Exception:
         return JSONResponse(
             content={"error": "模型返回的 JSON 解析失败，再试一次"}, status_code=500
